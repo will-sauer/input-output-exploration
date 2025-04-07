@@ -51,3 +51,20 @@ uranium_impacts = [
     if 'uranium' in impact.lower()
 ]
 french_nuclear_total_intensity_vector_only_uranium = french_nuclear_total_intensity_vector.loc[uranium_impacts]
+
+#! change total intensity from per EUR to per kWh
+#TODO: to be completed post preso, only the indexes of exio.y don't match french_nuclear_sectors
+#TODO: just need to resolve that and then it should work; but this is the basic flow below
+#* french nuclear output in kwh
+#* https://www.iea.org/data-and-statistics/data-tools/energy-statistics-data-browser?country=FRANCE&energy=Electricity&year=2011
+# french_nuclear_kwh_2011 = 442_387_000_000
+
+#* fr nuclear output in eur from final demand / y matrix
+#* takes total output across both processing and production (since i want to get extraction for both sectors)
+# french_nuclear_output_eur = exio.Y[french_nuclear_sectors].sum()
+
+#* get a rate from the two
+# eur_per_kwh = french_nuclear_output_eur / french_nuclear_kwh_2011
+
+#* convert the total intensity vector's units using the rate
+# french_nuclear_total_instensity_vector_only_uranium_per_kwh = french_nuclear_total_intensity_vector_only_uranium * eur_per_kwh
