@@ -2,12 +2,10 @@ import pymrio
 import numpy as np
 import pandas as pd
 
-
 #! prep / setting up the data for leontief
 #* load data (need to experiment with one command for this)
 exio = pymrio.parse_exiobase3('../data/external/IOT_2011_ixi')
 exio = pymrio.load_all('../data/external/IOT_2011_ixi')
-
 
 #* pull direct impact data and aggregate / wrangle it
 #* no linear algebra and no upstream impact
@@ -18,15 +16,12 @@ french_nuclear_sectors = [
      and 'nuclear' in sector[1].lower()
  ]
 
-
 #* locate rows from f matrix that have entries under the french nuclear sector columns
 #* returns a long list of two columns — one for each of two french nuclear sectors
 direct_impact = exio.satellite.F[french_nuclear_sectors]
 
-
 #* remove zero value impact rows
 non_zero_direct_impact = direct_impact[(direct_impact.iloc[:, 0] != 0) | (direct_impact.iloc[:, 1] != 0)]
-
 
 #* combine impacts from each of the two sectors into a single total
 total_direct_impact = direct_impact.sum(axis=1).sort_values(ascending=False)
@@ -54,32 +49,24 @@ uranium_impacts = [
 ]
 french_nuclear_total_intensity_vector_only_uranium = french_nuclear_total_intensity_vector.loc[uranium_impacts]
 
-
-
-
 #! change total intensity from per kt extraction / M.EUR to kg extraction / kWh
-
 
 kg_kt = 1_000_000 #* 1000 kg / 1 kt
 meur_eur = 1 / 1_000_000 #* 1 meur / 1000000 eur
 french_nuclear_output_2011_kwh = 442_387_000_000 #* iea lists as gwh, converted to kwh
-french_nuclear_sectors_elec_production_only
-french_nuclear_output_2011_meur = #* get final demand for ONLY production — I am not concerned with output of processing sector as that would inflate EUR output numbers relative to kWh. The processing sector did not produce those outputs, only the production sector
-
-
-
-#* french nuclear output in kwh
 #* https://www.iea.org/data-and-statistics/data-tools/energy-statistics-data-browser?country=FRANCE&energy=Electricity&year=2011
-# french_nuclear_kwh_2011 = 442_387_000_000
 
-#* fr nuclear output in eur from final demand / y matrix
-#* takes total output across both processing and production (since i want to get extraction for both sectors)
-# french_nuclear_output_eur = exio.Y[french_nuclear_sectors].sum()
+#* get the output of *only* the production of electricity by nuclear sector
+nuclear_electricity_row = [
+    row for row in exio.Y.index
+    if 'fr' in row[0].lower() and 'production of electricity by nuclear' in row[1].lower()
+]
 
-#* get a rate from the two
-# eur_per_kwh = french_nuclear_output_eur / french_nuclear_kwh_2011
+#* extract the column from the Y matrix (this will include all final demand rows)
+#* transpose and sort for easier viewing in datawrangler
+french_nuclear_electricity_final_demand = exio.Y.loc[nuclear_electricity_row, :].transpose()
+french_nuclear_electricity_final_demand = french_nuclear_electricity_final_demand.sort_values(by=french_nuclear_electricity_final_demand.columns[0], ascending=False)
 
-#* convert the total intensity vector's units using the rate
-# french_nuclear_total_instensity_vector_only_uranium_per_kwh = french_nuclear_total_intensity_vector_only_uranium * eur_per_kwh
-
+#* sum all rows to get total final demand (small check against the above data frame)
+french_nuclear_electricity_final_demand_total = french_nuclear_electricity_final_demand.sum(axis=None)
 
