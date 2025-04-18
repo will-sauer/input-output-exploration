@@ -58,8 +58,16 @@ french_nuclear_total_intensity_vector_only_uranium = french_nuclear_total_intens
 
 
 #! change total intensity from per kt extraction / M.EUR to kg extraction / kWh
-#TODO: to be completed post preso, only the indexes of exio.y don't match french_nuclear_sectors
-#TODO: just need to resolve that and then it should work; but this is the basic flow below
+
+
+kg_kt = 1_000_000 #* 1000 kg / 1 kt
+meur_eur = 1 / 1_000_000 #* 1 meur / 1000000 eur
+french_nuclear_output_2011_kwh = 442_387_000_000 #* iea lists as gwh, converted to kwh
+french_nuclear_sectors_elec_production_only
+french_nuclear_output_2011_meur = #* get final demand for ONLY production — I am not concerned with output of processing sector as that would inflate EUR output numbers relative to kWh. The processing sector did not produce those outputs, only the production sector
+
+
+
 #* french nuclear output in kwh
 #* https://www.iea.org/data-and-statistics/data-tools/energy-statistics-data-browser?country=FRANCE&energy=Electricity&year=2011
 # french_nuclear_kwh_2011 = 442_387_000_000
