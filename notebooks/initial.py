@@ -3,14 +3,15 @@ import numpy as np
 import pandas as pd
 
 
-#! loading the data (need to experiment with one command for this)
+#! prep / setting up the data for leontief
+#* load data (need to experiment with one command for this)
 exio = pymrio.parse_exiobase3('../data/external/IOT_2011_ixi')
 exio = pymrio.load_all('../data/external/IOT_2011_ixi')
 
 
-#! this is all just pulling direct impact data and aggregating / wrangling it
-#! no linear algebra and no upstream
-#* a comprehension (aptly named)
+#* pull direct impact data and aggregate / wrangle it
+#* no linear algebra and no upstream impact
+#* using a python comprehension (aptly named) on the dataframe
 french_nuclear_sectors = [
      sector for sector in exio.A.columns
      if 'fr' in sector[0].lower()
@@ -18,41 +19,45 @@ french_nuclear_sectors = [
  ]
 
 
-#* so this locates rows from f matrix that have entries under the french nuclear sector columns (this gets us to a long list of two columns)
+#* locate rows from f matrix that have entries under the french nuclear sector columns
+#* returns a long list of two columns — one for each of two french nuclear sectors
 direct_impact = exio.satellite.F[french_nuclear_sectors]
 
 
-#* get some code here to extract all zero values, only list those with values (using a comprehension)
+#* remove zero value impact rows
 non_zero_direct_impact = direct_impact[(direct_impact.iloc[:, 0] != 0) | (direct_impact.iloc[:, 1] != 0)]
 
 
-#* just adding across the columns here (so both nuclear sectors combined, for a given impact—procesing and elec production)
+#* combine impacts from each of the two sectors into a single total
 total_direct_impact = direct_impact.sum(axis=1).sort_values(ascending=False)
 
-# ! now we're doing leontief ... getting the full picture per 1 EUR (the total instensity vector)
 
+#! doing leontief and total intensity vector for all sectors
 I = np.identity(len(exio.A)) #* create an identity matrix of the A matrix
-L = L = np.linalg.inv(I - exio.A.values) # * THIS IS THE MAGICAL LEONTIEF
-F = exio.satellite.F.values #* just load all F values into standalone dataframe
+L = L = np.linalg.inv(I - exio.A.values) #* LEONTIEF
+F = exio.satellite.F.values #* load all F values into standalone dataframe
 
-total_intensity_vector = F @ L # * the total impact for 1 EUR unit of a given country-sector
+total_intensity_vector = F @ L # * total intensity vector: per 1 M.EUR of nuclear sector(s) output
 
-#* adding back in names
+#* add back in names
 total_intensity_vector_w_names = pd.DataFrame(total_intensity_vector, index=exio.satellite.F.index, columns=exio.A.columns)
 
-#! narrow down the total intensity vector to what i want: two fr nuclear sectors and uranium extraction
+#! use previous data prep to extract just fr nuclear sector resuls
 
-#* narrowing down to only 2 columns (from all sectors in europe) — just french nuclear sector
+#* filter to only the french nuclear sector (down to 2 columns)
 french_nuclear_total_intensity_vector = total_intensity_vector_w_names[french_nuclear_sectors]
 
-#* filter for only the uranium extraction impacts, down to just two rows
+#* filter for only the uranium extraction impacts (down to 2 rows)
 uranium_impacts = [
     impact for impact in total_intensity_vector_w_names.index #* pick the rows (the index) with uranium
     if 'uranium' in impact.lower()
 ]
 french_nuclear_total_intensity_vector_only_uranium = french_nuclear_total_intensity_vector.loc[uranium_impacts]
 
-#! change total intensity from per EUR to per kWh
+
+
+
+#! change total intensity from per kt extraction / M.EUR to kg extraction / kWh
 #TODO: to be completed post preso, only the indexes of exio.y don't match french_nuclear_sectors
 #TODO: just need to resolve that and then it should work; but this is the basic flow below
 #* french nuclear output in kwh
@@ -68,3 +73,5 @@ french_nuclear_total_intensity_vector_only_uranium = french_nuclear_total_intens
 
 #* convert the total intensity vector's units using the rate
 # french_nuclear_total_instensity_vector_only_uranium_per_kwh = french_nuclear_total_intensity_vector_only_uranium * eur_per_kwh
+
+
