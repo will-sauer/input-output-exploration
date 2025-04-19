@@ -2,33 +2,17 @@ import pymrio
 import numpy as np
 import pandas as pd
 
-#! prep / setting up the data for leontief
+#! constants
+KG_KT = 1_000_000 #* 1000 kg / 1 kt
+MEUR_EUR = 1 / 1_000_000 #* 1 meur / 1000000 eur
+EUR_MEUR = 1_000_000 #* 1000000 eur / 1 meur
 
-#* load data (need to experiment with one command for this)
-exio = pymrio.parse_exiobase3('../data/external/IOT_2011_ixi')
+#! load data (need to experiment with one command for this)
+
 exio = pymrio.load_all('../data/external/IOT_2011_ixi')
+exio = pymrio.parse_exiobase3('../data/external/IOT_2011_ixi')
 
-#* pull direct impact data and aggregate / wrangle it
-#* no linear algebra and no upstream impact
-#* using a python comprehension (aptly named) on the dataframe
-french_nuclear_sectors = [
-     sector for sector in exio.A.columns
-     if 'fr' in sector[0].lower()
-     and 'nuclear' in sector[1].lower()
- ]
-
-#* locate rows from f matrix that have entries under the french nuclear sector columns
-#* returns a long list of two columns — one for each of two french nuclear sectors
-direct_impact = exio.satellite.F[french_nuclear_sectors]
-
-#* remove zero value impact rows
-non_zero_direct_impact = direct_impact[(direct_impact.iloc[:, 0] != 0) | (direct_impact.iloc[:, 1] != 0)]
-
-#* combine impacts from each of the two sectors into a single total
-total_direct_impact = direct_impact.sum(axis=1).sort_values(ascending=False)
-
-
-#! doing leontief and total intensity vector for all sectors
+#! calculate database wide total intensity vector (impacts per M.EUR) via leontief
 
 I = np.identity(len(exio.A)) #* create an identity matrix of the A matrix
 L = L = np.linalg.inv(I - exio.A.values) #* LEONTIEF
@@ -36,52 +20,65 @@ F = exio.satellite.F.values #* load all F values into standalone dataframe
 
 total_intensity_vector = F @ L # * total intensity vector: per M.EUR of output
 
-#* add back in names
-total_intensity_vector_w_names = pd.DataFrame(total_intensity_vector, index=exio.satellite.F.index, columns=exio.A.columns)
+#* add names
+total_intensity_vector_w_names = pd.DataFrame(
+    total_intensity_vector,
+    index=exio.satellite.F.index,
+    columns=exio.A.columns
+)
 
-#! use previous data prep to extract just fr nuclear sector resuls
+#! narrow down database wise total intensity vector to only french nuclear sectors x uranium impacts
+#* grab names of french nuclear sectors from technical coefficients matrix
+french_nuclear_sector_names = [
+     sector for sector in exio.A.columns
+     if 'fr' in sector[0].lower()
+     and 'nuclear' in sector[1].lower()
+ ]
 
-#* filter to only the french nuclear sector (down to 2 columns)
-french_nuclear_total_intensity_vector = total_intensity_vector_w_names[french_nuclear_sectors]
+#* filter total intensity vector down to just the french nuclear sector (down to 2 columns)
+french_nuclear_total_intensity_vector = total_intensity_vector_w_names[french_nuclear_sector_names]
 
-#* filter for only the uranium extraction impacts (down to 2 rows)
-uranium_impacts = [
-    impact for impact in total_intensity_vector_w_names.index #* pick the rows (the index) with uranium
+#* assemble names of uranium impacts for filtering
+#* pick the row names (the index) containing uranium
+uranium_impact_names = [
+    impact for impact in total_intensity_vector_w_names.index 
     if 'uranium' in impact.lower()
 ]
-french_nuclear_total_intensity_vector_only_uranium = french_nuclear_total_intensity_vector.loc[uranium_impacts]
+
+#* filter impacts of french nuclear sector to only uranium (down to two rows), then sum
+french_nuclear_total_intensity_vector_only_uranium = french_nuclear_total_intensity_vector.loc[uranium_impact_names]
 french_nuclear_total_intensity_vector_only_uranium_sum = french_nuclear_total_intensity_vector_only_uranium.to_numpy().sum()
 
 #! change total intensity from per kt extraction / M.EUR to kg extraction / kWh
 
-#! constant
-kg_kt = 1_000_000 #* 1000 kg / 1 kt
-#! constant
-meur_eur = 1 / 1_000_000 #* 1 meur / 1000000 eur
-#! constant
-eur_meur = 1_000_000 #* 1000000 eur / 1 meur
+#* get total french nuclear elec output from 2011, iea lists as gwh, converted to kwh
+#* source: https://www.iea.org/data-and-statistics/data-tools/energy-statistics-data-browser?country=FRANCE&energy=Electricity&year=2011
+french_nuclear_output_kwh = 442_387_000_000 
 
-
-french_nuclear_output_2011_kwh = 442_387_000_000 #* iea lists as gwh, converted to kwh
-#* https://www.iea.org/data-and-statistics/data-tools/energy-statistics-data-browser?country=FRANCE&energy=Electricity&year=2011
-
-#* get the output of *only* the production of electricity by nuclear sector
-nuclear_electricity_row = [
+#* get the output (final demand, in exiobase terminology) of *only* the production of electricity by nuclear sector
+nuclear_electricity_production_row_name = [
     row for row in exio.Y.index
     if 'fr' in row[0].lower() and 'production of electricity by nuclear' in row[1].lower()
 ]
 
 #* extract the column from the Y matrix (this will include all final demand rows) for the production sector
-#* transpose and sort for easier viewing in datawrangler
-french_nuclear_electricity_final_demand = exio.Y.loc[nuclear_electricity_row, :].transpose()
-french_nuclear_electricity_final_demand = french_nuclear_electricity_final_demand.sort_values(by=french_nuclear_electricity_final_demand.columns[0], ascending=False)
+french_nuclear_electricity_final_demand = exio.Y.loc[nuclear_electricity_production_row_name, :].transpose()
 
-#* doing the same thing in different way as a check: sum all rows to get total final demand
-french_nuclear_electricity_final_demand_total = french_nuclear_electricity_final_demand.sum(axis=None)
+#* second, sum all rows to get total final demand
+french_nuclear_electricity_final_demand_sum = french_nuclear_electricity_final_demand.sum()
 
-#* 2011 output in euros per kWh
-french_nuclear_output_eur_kwh = french_nuclear_electricity_final_demand_total / french_nuclear_output_2011_kwh * eur_meur
+# #* not used directly, just a crosscheck
+# #* first, transpose and sort for easier viewing in datawrangler
+french_nuclear_electricity_final_demand = french_nuclear_electricity_final_demand.sort_values(
+    by=french_nuclear_electricity_final_demand.columns[0],
+    ascending=False
+)
+
+#* use above to get french nuclear sector output in euros per kWh for conversion of total intensity vector
+french_nuclear_output_eur_kwh = french_nuclear_electricity_final_demand_sum / french_nuclear_output_kwh * EUR_MEUR
 
 #*so now i have all the elements to do the calculation ... do this upon return
 #* don't forget to conert final demand to eur (from M.EUR?)
-french_extraction_intensity_kg_kwh = french_nuclear_total_intensity_vector_only_uranium_sum * kg_kt * meur_eur * french_nuclear_output_eur_kwh
+french_nuclear_extraction_intensity_kg_kwh = (
+    french_nuclear_total_intensity_vector_only_uranium_sum * KG_KT * MEUR_EUR * french_nuclear_output_eur_kwh
+)
