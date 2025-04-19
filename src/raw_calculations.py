@@ -3,14 +3,16 @@ import numpy as np
 import pandas as pd
 
 #! constants
+
 KG_KT = 1_000_000 #* 1000 kg / 1 kt
 MEUR_EUR = 1 / 1_000_000 #* 1 meur / 1000000 eur
 EUR_MEUR = 1_000_000 #* 1000000 eur / 1 meur
+DATA_LOCATION = '../data/external/IOT_2011_ixi'
 
-#! load data (need to experiment with one command for this)
+#! load data
 
-exio = pymrio.load_all('../data/external/IOT_2011_ixi')
-exio = pymrio.parse_exiobase3('../data/external/IOT_2011_ixi')
+exio = pymrio.load_all(DATA_LOCATION)
+exio = pymrio.parse_exiobase3(DATA_LOCATION)
 
 #! calculate database wide total intensity vector (impacts per M.EUR) via leontief
 
