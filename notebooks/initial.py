@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 
 #! prep / setting up the data for leontief
+
 #* load data (need to experiment with one command for this)
 exio = pymrio.parse_exiobase3('../data/external/IOT_2011_ixi')
 exio = pymrio.load_all('../data/external/IOT_2011_ixi')
@@ -28,6 +29,7 @@ total_direct_impact = direct_impact.sum(axis=1).sort_values(ascending=False)
 
 
 #! doing leontief and total intensity vector for all sectors
+
 I = np.identity(len(exio.A)) #* create an identity matrix of the A matrix
 L = L = np.linalg.inv(I - exio.A.values) #* LEONTIEF
 F = exio.satellite.F.values #* load all F values into standalone dataframe
@@ -52,9 +54,14 @@ french_nuclear_total_intensity_vector_only_uranium_sum = french_nuclear_total_in
 
 #! change total intensity from per kt extraction / M.EUR to kg extraction / kWh
 
+#! constant
 kg_kt = 1_000_000 #* 1000 kg / 1 kt
+#! constant
 meur_eur = 1 / 1_000_000 #* 1 meur / 1000000 eur
-eur_meur = 1_000_000 #* 1 eur / 1 meur
+#! constant
+eur_meur = 1_000_000 #* 1000000 eur / 1 meur
+
+
 french_nuclear_output_2011_kwh = 442_387_000_000 #* iea lists as gwh, converted to kwh
 #* https://www.iea.org/data-and-statistics/data-tools/energy-statistics-data-browser?country=FRANCE&energy=Electricity&year=2011
 
