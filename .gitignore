@@ -9,9 +9,9 @@ __pycache__/
 .Python
 env/
 build/
+data/external
 develop-eggs/
 dist/
-data/external
 downloads/
 eggs/
 .eggs/
